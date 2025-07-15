@@ -1,0 +1,150 @@
+import numpy as np
+import nnfs
+from nnfs.datasets import spiral_data, vertical_data
+
+nnfs.init()
+
+#The vertical data is just three groups of points each with their own class, this is basic data but easy to understand for the network
+X, y = vertical_data(samples=100, classes=3)
+
+#this is each layer
+class Layer_Dense:
+    def __init__(self,n_inputs,n_neurons):
+        self.weights = 0.1 * np.random.randn(n_inputs, n_neurons)
+        self.biases = np.zeros((1,n_neurons))
+    def forward(self, inputs):
+        self.output = np.dot(inputs, self.weights) + self.biases
+
+#activates all the neurons in the middle of the network, gets rid of negatives
+class Activation_ReLU:
+    def forward(self, inputs):
+        self.output = np.maximum(0, inputs)
+
+#changes the outputs to be probabilities that all add to 1
+class Activation_softmax:
+    def forward(self, inputs):
+        exp_values = np.exp(inputs - np.max(inputs, axis=1, keepdims=True))
+        probabilities = exp_values / np.sum(exp_values, axis=1, keepdims=True)
+        self.output = probabilities
+
+#how far from the expected value
+class Loss:
+    def calculate(self,output, y):
+        sample_losses = self.forward(output, y)
+        data_loss = np.mean(sample_losses)
+        return data_loss
+
+#This calculates how well the predictions match the model
+class Loss_CategoricalCrossentrophy(Loss):
+    def forward(self, y_pred, y_true):
+        sample = len(y_pred)
+        y_pred_clipped = np.clip(y_pred, 1e-7, 1-1e-7) #basically (0, 1), the code/math just does not like 0
+        
+        #allows for multiple data types
+        if len(y_true.shape) == 1: #if scaler values
+            correct_confidences = y_pred_clipped[range(sample), y_true]
+        elif len(y_true.shape) == 2: 
+            correct_confidences = np.sum(y_pred_clipped*y_true, axis=1)
+            
+        negative_log_likelihoods = -np.log(correct_confidences)
+        return negative_log_likelihoods
+
+def AskToContinue():
+    #asks if the model seems good and we want to continue to be able to enter our own values
+    isContinue = input("\nModel Trained, would you like to continue? (Y/N)")
+    if isContinue == "Y" or isContinue == "y":
+        ContinueToInput()
+    if isContinue == "N" or isContinue == "n":
+        print("Program closed")
+    else:
+        print("please enter Y or N")
+        AskToContinue()
+    
+                  
+def ContinueToInput():
+    inputValues = input("Enter two coordinates (0-1), seperate them with a space: ")
+
+    #make the data readible 
+    user_data = np.array([float(i) for i in inputValues.strip().split()])
+    user_data = user_data.reshape(1, 2) 
+
+    #upload the trained model and pass the data through
+    dense1.weights = best_dense1_weights
+    dense1.biases = best_dense1_biases
+    dense2.weights = best_dense2_weights
+    dense2.biases = best_dense2_biases
+    
+    dense1.forward(user_data)
+    activation1.forward(dense1.output)
+    dense2.forward(activation1.output)
+    activation2.forward(dense2.output)
+    
+    #print the probabilities
+    print(activation2.output[0])
+    
+    
+#This right here is the network
+dense1 = Layer_Dense(2,3)
+activation1 = Activation_ReLU()
+dense2 = Layer_Dense(3,3)
+activation2 = Activation_softmax()
+
+loss_function = Loss_CategoricalCrossentrophy()
+
+lowest_loss = 9999999
+best_dense1_weights = dense1.weights.copy()
+best_dense1_biases = dense1.biases.copy()
+best_dense2_weights = dense2.weights.copy()
+best_dense2_biases = dense2.biases.copy()
+
+#run the network a bunch of times
+for iteration in range(100000):
+    #mutation!
+    dense1.weights += 0.05 * np.random.randn(2,3)
+    dense1.biases += 0.05 * np.random.randn(1,3)
+    dense2.weights += 0.05 * np.random.randn(3,3)
+    dense2.biases += 0.05 * np.random.randn(1,3)
+    
+    dense1.forward(X)
+    activation1.forward(dense1.output)
+    dense2.forward(activation1.output)
+    activation2.forward(dense2.output)
+    
+    loss = loss_function.calculate(activation2.output, y)
+    
+    predictions = np.argmax(activation2.output, axis=1)
+    accuracy = np.mean(predictions==y)
+    
+    #keep the mutation if its better
+    if loss < lowest_loss:
+        best_dense1_weights = dense1.weights.copy()
+        best_dense1_biases = dense1.biases.copy()
+        best_dense2_weights = dense2.weights.copy()
+        best_dense2_biases = dense2.biases.copy()
+        lowest_loss = loss
+    else:
+        dense1.weights = best_dense1_weights.copy()
+        dense1.biases = best_dense1_biases.copy()
+        dense2.weights = best_dense2_weights.copy()
+        dense2.biases = best_dense2_biases.copy()
+
+
+dense1.forward(X)
+activation1.forward(dense1.output)
+
+dense2.forward(activation1.output)
+activation2.forward(dense2.output)
+
+#print the top 5, each # is probability of that class ([prob of class 0   prob of class 1    prob of class 2])
+print(activation2.output[:5])
+
+#print out the chosen classes for each output
+print(np.argmax(activation2.output[:5], axis=1))
+
+#give me the loss amount, closer to 0 means more accurate
+loss = loss_function.calculate(activation2.output, y)
+print("Loss: ", loss)
+
+AskToContinue()
+
+    
