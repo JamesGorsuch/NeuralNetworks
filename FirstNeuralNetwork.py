@@ -7,21 +7,31 @@ nnfs.init()
 #The vertical data is just three groups of points each with their own class, this is basic data but easy to understand for the network
 X, y = vertical_data(samples=100, classes=3)
 
-#this is each layer
+
 class Layer_Dense:
+    """
+    This is a layer, basically output is inputs * weights + bias
+    """
     def __init__(self,n_inputs,n_neurons):
         self.weights = 0.1 * np.random.randn(n_inputs, n_neurons)
         self.biases = np.zeros((1,n_neurons))
     def forward(self, inputs):
         self.output = np.dot(inputs, self.weights) + self.biases
 
-#activates all the neurons in the middle of the network, gets rid of negatives
+
 class Activation_ReLU:
+    """
+    Activates all the neurons in the middle of the network
+    gets rid of negatives
+    """
     def forward(self, inputs):
         self.output = np.maximum(0, inputs)
 
-#changes the outputs to be probabilities that all add to 1
+
 class Activation_softmax:
+    """
+    Changes the outputs to be probabilities that all add to 1
+    """
     def forward(self, inputs):
         exp_values = np.exp(inputs - np.max(inputs, axis=1, keepdims=True))
         probabilities = exp_values / np.sum(exp_values, axis=1, keepdims=True)
@@ -29,13 +39,20 @@ class Activation_softmax:
 
 #how far from the expected value
 class Loss:
+    """
+    The base class for loss functions
+    Determines the average loss for a batch
+    """
     def calculate(self,output, y):
         sample_losses = self.forward(output, y)
         data_loss = np.mean(sample_losses)
         return data_loss
 
-#This calculates how well the predictions match the model
+
 class Loss_CategoricalCrossentrophy(Loss):
+    """
+    Calculates how well the predictions match the model
+    """
     def forward(self, y_pred, y_true):
         sample = len(y_pred)
         y_pred_clipped = np.clip(y_pred, 1e-7, 1-1e-7) #basically (0, 1), the code/math just does not like 0
@@ -50,8 +67,10 @@ class Loss_CategoricalCrossentrophy(Loss):
         return negative_log_likelihoods
 
 def AskToContinue():
-    #asks if the model seems good and we want to continue to be able to enter our own values
-    isContinue = input("\nModel Trained, would you like to continue? (Y/N)")
+    """
+    Asks if the model seems good and we want to continue to be able to enter our own values
+    """
+    isContinue = input("\nModel Trained, would you like to continue? (Y/N) ")
     if isContinue == "Y" or isContinue == "y":
         ContinueToInput()
     if isContinue == "N" or isContinue == "n":
@@ -83,7 +102,7 @@ def ContinueToInput():
     print(activation2.output[0])
     
     
-#This right here is the network
+#Build and connect the actual layers of the network
 dense1 = Layer_Dense(2,3)
 activation1 = Activation_ReLU()
 dense2 = Layer_Dense(3,3)
@@ -97,7 +116,7 @@ best_dense1_biases = dense1.biases.copy()
 best_dense2_weights = dense2.weights.copy()
 best_dense2_biases = dense2.biases.copy()
 
-#run the network a bunch of times
+#train the model using random weight mutations with the lowest loss
 for iteration in range(100000):
     #mutation!
     dense1.weights += 0.05 * np.random.randn(2,3)
