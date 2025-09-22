@@ -1,0 +1,10 @@
+Python 3.11.9
+
+----First Neural Network is my first one, using random mutation and selecting the best traits got me so far with simple data
+    I began to see that it was not very good at more complex tasks like the spiral data 
+    The data being used is nnfs sample data, this makes it easy to see the network function
+
+----I read through different ways to increase effiency instead of random mutation and found back propagation
+    After a good while learning how it works and what mistakes I made attempting to implement it, it got it working
+    I tested 10 or so points and had 90% accuracy 
+    
